@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Topic Clustering to Narrative Vectorization</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .visualization-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 40px;
+            margin: 40px 0;
+        }
+        
+        .stage {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        
+        .stage-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 15px;
+        }
+        
+        .stage-subtitle {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+        
+        .chart {
+            width: 280px;
+            height: 220px;
+            border: 2px solid #bdc3c7;
+            border-radius: 10px;
+            margin: 0 auto;
+            position: relative;
+            background: #fff;
+            overflow: hidden;
+        }
+        
+        .arrow {
+            font-size: 3em;
+            color: #3498db;
+            align-self: center;
+            opacity: 0;
+            animation: fadeInSlide 0.8s ease-in-out forwards;
+        }
+        
+        .arrow:nth-of-type(2) { animation-delay: 1.8s; } /* After stage 1 completes */
+        .arrow:nth-of-type(3) { animation-delay: 3.8s; } /* After stage 2 completes */
+        
+        /* Stage 1: Scattered Topics */
+        .scattered-point {
+            width: 12px;
+            height: 12px;
+            background: #95a5a6;
+            border-radius: 50%;
+            position: absolute;
+            opacity: 0;
+            animation: popIn 0.5s ease-out forwards;
+        }
+        
+        /* Stage 2: Clustered Topics - START AFTER STAGE 1 COMPLETES */
+        .cluster {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px dashed;
+            opacity: 0;
+            animation: clusterForm 1s ease-out forwards;
+        }
+        
+        .cluster-1 { 
+            border-color: #e74c3c; 
+            background: rgba(231, 76, 60, 0.1);
+            animation-delay: 2s; /* Start after stage 1 finishes */
+        }
+        .cluster-2 { 
+            border-color: #f39c12; 
+            background: rgba(243, 156, 18, 0.1);
+            animation-delay: 2.2s;
+        }
+        .cluster-3 { 
+            border-color: #3498db; 
+            background: rgba(52, 152, 219, 0.1);
+            animation-delay: 2.4s;
+        }
+        
+        .clustered-point {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            opacity: 0;
+            animation: clusterPointForm 0.5s ease-out forwards;
+        }
+        
+        .cluster-1-point { background: #e74c3c; animation-delay: 2.6s; }
+        .cluster-2-point { background: #f39c12; animation-delay: 2.8s; }
+        .cluster-3-point { background: #3498db; animation-delay: 3s; }
+        
+        /* Stage 3: Narrative Themes */
+        .stage3-cluster {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px dashed;
+            opacity: 0;
+            animation: initialClusterAppear 0.8s ease-out forwards;
+        }
+        
+        .stage3-cluster-1 { 
+            border-color: #e74c3c; 
+            background: rgba(231, 76, 60, 0.1);
+            animation-delay: 2.5s;
+        }
+        .stage3-cluster-2 { 
+            border-color: #f39c12; 
+            background: rgba(243, 156, 18, 0.1);
+            animation-delay: 2.5s;
+        }
+        .stage3-cluster-3 { 
+            border-color: #3498db; 
+            background: rgba(52, 152, 219, 0.1);
+            animation-delay: 2.5s;
+        }
+        
+        .stage3-point {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: absolute;
+            opacity: 0;
+            animation: clusterPointAppear 0.5s ease-out forwards;
+            animation-delay: 2.7s;
+        }
+        
+        .stage3-cluster-1-point { background: #e74c3c; }
+        .stage3-cluster-2-point { background: #f39c12; }
+        .stage3-cluster-3-point { background: #3498db; }
+        
+        .merge-animation {
+            animation: moveToMerge 1.5s ease-in-out forwards;
+            animation-delay: 3.5s;
+        }
+        
+        .merged-cluster {
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid #27ae60;
+            background: rgba(39, 174, 96, 0.15);
+            opacity: 0;
+            animation: mergedClusterForm 1s ease-out forwards;
+            animation-delay: 4.8s;
+        }
+        
+        .political-cluster {
+            animation: transformToPolitical 1s ease-out forwards;
+            animation-delay: 4.2s;
+        }
+        
+        .narrative-theme-label {
+            position: absolute;
+            font-size: 1em;
+            font-weight: 700;
+            padding: 8px 12px;
+            border-radius: 6px;
+            color: white;
+            white-space: nowrap;
+            opacity: 0;
+            transform: scale(0.8);
+            animation: themeAppear 0.6s ease-out forwards;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .social-label {
+            background: #27ae60;
+        }
+        
+        .political-label {
+            background: #e74c3c;
+        }
+        
+        /* Animations */
+        @keyframes fadeInSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes clusterForm {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes clusterPointForm {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes vectorDraw {
+            from {
+                opacity: 0;
+                transform: scale(0.5) rotate(-10deg);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        @keyframes initialClusterAppear {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes clusterPointAppear {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes moveToMerge {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            70% {
+                transform: translate(var(--merge-x), var(--merge-y));
+                opacity: 0.8;
+            }
+            100% {
+                transform: translate(var(--merge-x), var(--merge-y));
+                opacity: 0;
+            }
+        }
+        
+        @keyframes mergedClusterForm {
+            from {
+                opacity: 0;
+                transform: scale(0);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes transformToPolitical {
+            0% {
+                border-color: #e74c3c;
+                background: rgba(231, 76, 60, 0.1);
+                border-style: dashed;
+                border-width: 2px;
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                border-color: #c0392b;
+                background: rgba(192, 57, 43, 0.2);
+                border-style: solid;
+                border-width: 3px;
+                transform: scale(1);
+            }
+        }
+        
+        @keyframes themeAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .legend {
+            margin-top: 40px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .legend h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .legend-item {
+            margin: 8px 0;
+            color: #34495e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>From Topics to Narratives: Clustering & Vectorization</h1>
+        
+        <div class="visualization-container">
+            <!-- Stage 1: Scattered Topics -->
+            <div class="stage">
+                <div class="stage-title">1. Raw Topics</div>
+                <div class="stage-subtitle">Unstructured data points</div>
+                <div class="chart" id="stage1">
+                    <!-- Scattered points will be generated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <!-- Stage 2: Clustered Topics -->
+            <div class="stage">
+                <div class="stage-title">2. Topic Clusters</div>
+                <div class="stage-subtitle">Related topics grouped</div>
+                <div class="chart" id="stage2">
+                    <!-- Clusters will be generated by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="arrow">→</div>
+            
+            <!-- Stage 3: Narrative Themes -->
+            <div class="stage">
+                <div class="stage-title">3. Narrative Themes</div>
+                <div class="stage-subtitle">Merged cluster narratives</div>
+                <div class="chart" id="stage3">
+                    <!-- Narrative themes will be generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <h3>Process Explanation</h3>
+            <div class="legend-item"><strong>Stage 1:</strong> Individual topics scattered across the information space</div>
+            <div class="legend-item"><strong>Stage 2:</strong> Machine learning algorithms group related topics into coherent clusters</div>
+            <div class="legend-item"><strong>Stage 3:</strong> Related clusters merge into higher-level narrative themes - blue and orange clusters combine into "Social Trends" while red transforms into "Political Issues"</div>
+        </div>
+    </div>
+
+    <script>
+        // Generate scattered points for Stage 1
+        function generateScatteredPoints() {
+            const stage1 = document.getElementById('stage1');
+            const pointPositions = [
+                {x: 30, y: 40}, {x: 80, y: 25}, {x: 45, y: 70}, {x: 120, y: 50},
+                {x: 160, y: 35}, {x: 200, y: 80}, {x: 90, y: 100}, {x: 180, y: 120},
+                {x: 60, y: 130}, {x: 230, y: 60}, {x: 150, y: 90}, {x: 40, y: 160},
+                {x: 210, y: 140}, {x: 110, y: 170}, {x: 190, y: 30}
+            ];
+            
+            pointPositions.forEach((pos, index) => {
+                const point = document.createElement('div');
+                point.className = 'scattered-point';
+                point.style.left = pos.x + 'px';
+                point.style.top = pos.y + 'px';
+                point.style.animationDelay = (index * 0.1) + 's';
+                stage1.appendChild(point);
+            });
+        }
+        
+        // Generate clustered points for Stage 2
+        function generateClusteredPoints() {
+            const stage2 = document.getElementById('stage2');
+            
+            // Cluster 1 (red)
+            const cluster1 = document.createElement('div');
+            cluster1.className = 'cluster cluster-1';
+            cluster1.style.left = '30px';
+            cluster1.style.top = '30px';
+            cluster1.style.width = '80px';
+            cluster1.style.height = '70px';
+            stage2.appendChild(cluster1);
+            
+            const cluster1Points = [
+                {x: 40, y: 45}, {x: 65, y: 35}, {x: 55, y: 60}, {x: 75, y: 70}, {x: 45, y: 75}
+            ];
+            
+            cluster1Points.forEach((pos, index) => {
+                const point = document.createElement('div');
+                point.className = 'clustered-point cluster-1-point';
+                point.style.left = pos.x + 'px';
+                point.style.top = pos.y + 'px';
+                point.style.animationDelay = (1.8 + index * 0.1) + 's';
+                stage2.appendChild(point);
+            });
+            
+            // Cluster 2 (orange)
+            const cluster2 = document.createElement('div');
+            cluster2.className = 'cluster cluster-2';
+            cluster2.style.left = '80px';
+            cluster2.style.top = '120px';
+            cluster2.style.width = '70px';
+            cluster2.style.height = '60px';
+            stage2.appendChild(cluster2);
+            
+            const cluster2Points = [
+                {x: 90, y: 135}, {x: 110, y: 125}, {x: 125, y: 145}, {x: 105, y: 160}
+            ];
+            
+            cluster2Points.forEach((pos, index) => {
+                const point = document.createElement('div');
+                point.className = 'clustered-point cluster-2-point';
+                point.style.left = pos.x + 'px';
+                point.style.top = pos.y + 'px';
+                point.style.animationDelay = (2.0 + index * 0.1) + 's';
+                stage2.appendChild(point);
+            });
+            
+            // Cluster 3 (blue)
+            const cluster3 = document.createElement('div');
+            cluster3.className = 'cluster cluster-3';
+            cluster3.style.left = '180px';
+            cluster3.style.top = '40px';
+            cluster3.style.width = '75px';
+            cluster3.style.height = '80px';
+            stage2.appendChild(cluster3);
+            
+            const cluster3Points = [
+                {x: 190, y: 55}, {x: 215, y: 45}, {x: 235, y: 70}, {x: 200, y: 85}, {x: 225, y: 95}, {x: 210, y: 110}
+            ];
+            
+            cluster3Points.forEach((pos, index) => {
+                const point = document.createElement('div');
+                point.className = 'clustered-point cluster-3-point';
+                point.style.left = pos.x + 'px';
+                point.style.top = pos.y + 'px';
+                point.style.animationDelay = (2.2 + index * 0.1) + 's';
+                stage2.appendChild(point);
+            });
+        }
+        
+        // Generate narrative themes for Stage 3 (cluster merging)
+        function generateNarrativeVectors() {
+            const stage3 = document.getElementById('stage3');
+            
+            // Step 1: Start with exact same clusters as stage 2 end state - WAIT FOR STAGE 2 TO FINISH
+            setTimeout(() => {
+                // Red cluster (same position as stage 2)
+                const redCluster = document.createElement('div');
+                redCluster.className = 'cluster cluster-1'; // Use same styling as stage 2
+                redCluster.style.left = '30px';
+                redCluster.style.top = '30px';
+                redCluster.style.width = '80px';
+                redCluster.style.height = '70px';
+                redCluster.style.opacity = '1'; // Already visible
+                redCluster.style.transition = 'all 1s ease-out';
+                redCluster.id = 'red-cluster-s3';
+                stage3.appendChild(redCluster);
+                
+                // Red cluster points (exact same positions as stage 2)
+                const redPoints = [
+                    {x: 40, y: 45}, {x: 65, y: 35}, {x: 55, y: 60}, {x: 75, y: 70}, {x: 45, y: 75}
+                ];
+                redPoints.forEach((pos, index) => {
+                    const point = document.createElement('div');
+                    point.className = 'clustered-point cluster-1-point'; // Same as stage 2
+                    point.style.left = pos.x + 'px';
+                    point.style.top = pos.y + 'px';
+                    point.style.opacity = '0'; // Start invisible
+                    point.style.transition = 'all 1.2s ease-in-out, opacity 0.5s ease-out';
+                    stage3.appendChild(point);
+                    
+                    // Fade in with staggered delay
+                    setTimeout(() => {
+                        point.style.opacity = '1';
+                    }, index * 100);
+                });
+                
+                // Orange cluster (same position as stage 2)
+                const orangeCluster = document.createElement('div');
+                orangeCluster.className = 'cluster cluster-2'; // Use same styling as stage 2
+                orangeCluster.style.left = '80px';
+                orangeCluster.style.top = '120px';
+                orangeCluster.style.width = '70px';
+                orangeCluster.style.height = '60px';
+                orangeCluster.style.opacity = '1'; // Already visible
+                orangeCluster.style.transition = 'all 1.2s ease-in-out';
+                orangeCluster.id = 'orange-cluster-s3';
+                stage3.appendChild(orangeCluster);
+                
+                // Orange cluster points (exact same positions as stage 2)
+                const orangePoints = [
+                    {x: 90, y: 135}, {x: 110, y: 125}, {x: 125, y: 145}, {x: 105, y: 160}
+                ];
+                orangePoints.forEach((pos, index) => {
+                    const point = document.createElement('div');
+                    point.className = 'clustered-point cluster-2-point orange-point-s3';
+                    point.style.left = pos.x + 'px';
+                    point.style.top = pos.y + 'px';
+                    point.style.opacity = '0'; // Start invisible
+                    point.style.transition = 'all 1.2s ease-in-out, opacity 0.5s ease-out';
+                    stage3.appendChild(point);
+                    
+                    // Fade in with staggered delay (after red points)
+                    setTimeout(() => {
+                        point.style.opacity = '1';
+                    }, 500 + (index * 100));
+                });
+                
+                // Blue cluster (same position as stage 2)
+                const blueCluster = document.createElement('div');
+                blueCluster.className = 'cluster cluster-3'; // Use same styling as stage 2
+                blueCluster.style.left = '180px';
+                blueCluster.style.top = '40px';
+                blueCluster.style.width = '75px';
+                blueCluster.style.height = '80px';
+                blueCluster.style.opacity = '1'; // Already visible
+                blueCluster.style.transition = 'all 1.2s ease-in-out';
+                blueCluster.id = 'blue-cluster-s3';
+                stage3.appendChild(blueCluster);
+                
+                // Blue cluster points (exact same positions as stage 2)
+                const bluePoints = [
+                    {x: 190, y: 55}, {x: 215, y: 45}, {x: 235, y: 70}, {x: 200, y: 85}, {x: 225, y: 95}, {x: 210, y: 110}
+                ];
+                bluePoints.forEach((pos, index) => {
+                    const point = document.createElement('div');
+                    point.className = 'clustered-point cluster-3-point blue-point-s3';
+                    point.style.left = pos.x + 'px';
+                    point.style.top = pos.y + 'px';
+                    point.style.opacity = '0'; // Start invisible
+                    point.style.transition = 'all 1.2s ease-in-out, opacity 0.5s ease-out';
+                    stage3.appendChild(point);
+                    
+                    // Fade in with staggered delay (after orange points)
+                    setTimeout(() => {
+                        point.style.opacity = '1';
+                    }, 900 + (index * 100));
+                });
+            }, 4000); // Start after stage 2 finishes (around 3.5s, so wait until 4s)
+            
+            // Step 2: Show merging animation - move orange and blue toward center
+            setTimeout(() => {
+                const orangeCluster = document.getElementById('orange-cluster-s3');
+                const blueCluster = document.getElementById('blue-cluster-s3');
+                const orangePoints = document.querySelectorAll('.orange-point-s3');
+                const bluePoints = document.querySelectorAll('.blue-point-s3');
+                
+                // Move clusters toward merge point
+                if (orangeCluster) {
+                    orangeCluster.style.left = '140px';
+                    orangeCluster.style.top = '85px';
+                    orangeCluster.style.opacity = '0.6';
+                }
+                if (blueCluster) {
+                    blueCluster.style.left = '140px';
+                    blueCluster.style.top = '85px';
+                    blueCluster.style.opacity = '0.6';
+                }
+                
+                // Move orange points toward merge center
+                const orangeMergePositions = [
+                    {x: 160, y: 100}, {x: 170, y: 130}, {x: 185, y: 115}, {x: 165, y: 145}
+                ];
+                orangePoints.forEach((point, index) => {
+                    if (orangeMergePositions[index]) {
+                        point.style.left = orangeMergePositions[index].x + 'px';
+                        point.style.top = orangeMergePositions[index].y + 'px';
+                        point.style.background = '#27ae60'; // Change to green during merge
+                    }
+                });
+                
+                // Move blue points toward merge center
+                const blueMergePositions = [
+                    {x: 180, y: 90}, {x: 200, y: 110}, {x: 210, y: 125}, {x: 190, y: 140}, {x: 225, y: 105}, {x: 175, y: 155}
+                ];
+                bluePoints.forEach((point, index) => {
+                    if (blueMergePositions[index]) {
+                        point.style.left = blueMergePositions[index].x + 'px';
+                        point.style.top = blueMergePositions[index].y + 'px';
+                        point.style.background = '#27ae60'; // Change to green during merge
+                    }
+                });
+                
+            }, 5000); // Stage 3 animation step 2
+            
+            // Step 3: Complete merger - hide old clusters, show new green cluster
+            setTimeout(() => {
+                const orangeCluster = document.getElementById('orange-cluster-s3');
+                const blueCluster = document.getElementById('blue-cluster-s3');
+                
+                // Remove borders and background from merging clusters but keep points visible
+                if (orangeCluster) {
+                    orangeCluster.style.border = 'none';
+                    orangeCluster.style.background = 'transparent';
+                }
+                if (blueCluster) {
+                    blueCluster.style.border = 'none';
+                    blueCluster.style.background = 'transparent';
+                }
+                
+                // Create merged Social Trends cluster
+                const socialCluster = document.createElement('div');
+                socialCluster.style.position = 'absolute';
+                socialCluster.style.left = '130px';
+                socialCluster.style.top = '75px';
+                socialCluster.style.width = '110px';
+                socialCluster.style.height = '100px';
+                socialCluster.style.borderRadius = '50%';
+                socialCluster.style.border = '3px solid #27ae60';
+                socialCluster.style.background = 'rgba(39, 174, 96, 0.15)';
+                socialCluster.style.opacity = '0';
+                socialCluster.style.transition = 'opacity 0.8s ease-out';
+                stage3.appendChild(socialCluster);
+                
+                // Show social cluster
+                setTimeout(() => {
+                    socialCluster.style.opacity = '1';
+                }, 200);
+                
+            }, 6200); // Stage 3 animation step 3
+            
+            // Step 4: Transform red cluster to final Political Issues styling
+            setTimeout(() => {
+                const redCluster = document.getElementById('red-cluster-s3');
+                if (redCluster) {
+                    redCluster.style.borderStyle = 'solid';
+                    redCluster.style.borderWidth = '3px';
+                    redCluster.style.borderColor = '#c0392b';
+                    redCluster.style.background = 'rgba(192, 57, 43, 0.15)';
+                }
+            }, 6500); // Stage 3 animation step 4
+            
+            // Step 5: Add final labels
+            setTimeout(() => {
+                const politicalLabel = document.createElement('div');
+                politicalLabel.className = 'narrative-theme-label political-label';
+                politicalLabel.style.left = '15px';
+                politicalLabel.style.top = '105px';
+                politicalLabel.textContent = 'Political Issues';
+                stage3.appendChild(politicalLabel);
+                
+                const socialLabel = document.createElement('div');
+                socialLabel.className = 'narrative-theme-label social-label';
+                socialLabel.style.left = '120px';
+                socialLabel.style.top = '180px';
+                socialLabel.textContent = 'Social Trends';
+                stage3.appendChild(socialLabel);
+            }, 6800); // Stage 3 animation step 5
+        }
+        
+        // Initialize the visualization
+        window.addEventListener('load', () => {
+            generateScatteredPoints();
+            generateClusteredPoints();
+            generateNarrativeVectors();
+        });
+    </script>
+</body>
+</html>
